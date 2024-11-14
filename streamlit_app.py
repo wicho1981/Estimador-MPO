@@ -3,7 +3,6 @@ import pandas as pd
 import plotly.express as px
 from pathlib import Path
 import io
-import joblib
 import numpy as np
 from sklearn.linear_model import LinearRegression
 
@@ -14,61 +13,75 @@ st.set_page_config(
     layout='wide'
 )
 
-# -------------------------------------------------------------------------
-# CSS personalizado para ajustar la cabecera
+# CSS personalizado para la cabecera
 st.markdown(
     """
     <style>
         .cabecera {
-            background-color: var(--background-color);
-            padding: 10px;
-            margin-bottom: 20px;
+            background-color: #ffffff;
+            padding: 15px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            height: 100px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
         .logo {
-            flex: 0 0 20%;
-            height: 100%;
-            max-height: 100px;
-            object-fit: contain;
+            width: 80px;
+            height: auto;
+            margin-right: 20px;
+        }
+        .linea-vertical {
+            border-left: 2px solid #cccccc;
+            height: 60px;
+            margin: 0 20px;
+        }
+        .texto-cabecera {
+            display: flex;
+            flex-direction: column;
+            color: #333333;
         }
         .titulo {
-            flex: 0 0 70%;
-            font-size: 1.7em;
+            font-size: 1.5em;
             font-weight: bold;
-            text-align: right;
-            color: var(--text-color);
+            margin: 0;
+            color: #333333;
+        }
+        .subtitulo {
+            font-size: 0.9em;
+            color: #555555;
+            margin: 0;
+            font-style: italic;
         }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# Cabecera utilizando columnas de Streamlit
-with st.container():
-    st.markdown('<div class="cabecera">', unsafe_allow_html=True)
+# Cabecera con logo y título
+st.markdown('<div class="cabecera">', unsafe_allow_html=True)
 
-    # Ruta para el logo desde la carpeta principal
-    logo_path = Path(__file__).parent / 'logo.svg'
-    
-    if logo_path.is_file():
-        # Mostrar el logo si se encuentra
-        st.markdown(f'<img src="data:image/svg+xml;base64,{logo_path.read_bytes().decode()}" class="logo">', unsafe_allow_html=True)
-    else:
-        # Mostrar mensaje si el logo no se encuentra
-        st.markdown('<div style="color:red;">Error: Logo no encontrado.</div>', unsafe_allow_html=True)
+# Ruta para el logo en formato PNG
+logo_path = Path(__file__).parent / 'logo.png'
+if logo_path.is_file():
+    st.markdown(f'<img src="data:image/png;base64,{logo_path.read_bytes().decode("latin1")}" class="logo">', unsafe_allow_html=True)
+else:
+    st.markdown('<div style="color:red;">Error: Logo no encontrado.</div>', unsafe_allow_html=True)
 
-    # Título del proyecto y autores
-    st.markdown(
-        """
-        <div class="titulo">Estimación del MPO usando Datos de Generación <br> <i>Autores: Cristian Noguera & Jaider Sanchez</i></div>
-        """,
-        unsafe_allow_html=True
-    )
+# Línea vertical
+st.markdown('<div class="linea-vertical"></div>', unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
+# Título del proyecto y autores
+st.markdown(
+    """
+    <div class="texto-cabecera">
+        <div class="titulo">Estimación del MPO usando Datos de Generación</div>
+        <div class="subtitulo">Autores: Cristian Noguera & Jaider Sanchez</div>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+st.markdown('</div>', unsafe_allow_html=True)
 
 # Añadir un divisor horizontal
 st.markdown("---")
