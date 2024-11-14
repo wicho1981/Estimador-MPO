@@ -4,3 +4,4 @@ plotly
 seaborn
 xlsxwriter
 scikit-learn
+statsmodels
