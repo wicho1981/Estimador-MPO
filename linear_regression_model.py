@@ -1,31 +1,33 @@
-# Importar las bibliotecas necesarias
 import pandas as pd
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error, r2_score
+from pathlib import Path
 
-# Función para entrenar y predecir con el modelo de regresión lineal
-def train_linear_regression_model(data):
-    # Seleccionar las columnas necesarias para el modelo
-    X = data[['Valor', 'Hora', 'Tecnologia', 'Ajuste']]  # Reemplazar con las columnas que consideres necesarias
-    y = data['MPO']
+# Definir la carpeta donde están los datos
+data_folder = Path(__file__).parent / 'data'
 
-    # Convertir las variables categóricas en variables dummy (en este caso, la columna 'Tecnologia')
-    X = pd.get_dummies(X, columns=['Tecnologia'], drop_first=True)
+# Cargar archivos CSV con codificación ISO-8859-1
+caudal_2016 = pd.read_csv(data_folder / 'Aportes2016.csv', delimiter=';', parse_dates=['Fecha'], dayfirst=True, encoding='ISO-8859-1')
+caudal_2024 = pd.read_csv(data_folder / 'Aportes2024.csv', delimiter=';', parse_dates=['Fecha'], dayfirst=True, encoding='ISO-8859-1')
 
-    # Dividir los datos en conjuntos de entrenamiento y prueba
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+mpo_2016 = pd.read_csv(data_folder / 'dataset2016.csv', delimiter=';', parse_dates=['Fecha'], dayfirst=True, encoding='ISO-8859-1')
+mpo_2024 = pd.read_csv(data_folder / 'Dataset2024.csv', delimiter=';', parse_dates=['Fecha'], dayfirst=True, encoding='ISO-8859-1')
+mpo_calculado_2024 = pd.read_csv(data_folder / 'Datasetcalculado2024.csv', delimiter=';', parse_dates=['Fecha'], dayfirst=True, encoding='ISO-8859-1')
 
-    # Crear y entrenar el modelo de regresión lineal
-    model = LinearRegression()
-    model.fit(X_train, y_train)
+precios_ideales_2016 = pd.read_csv(data_folder / 'preofe2016.csv', delimiter=';', parse_dates=['Fecha'], dayfirst=True, encoding='ISO-8859-1')
+precios_ideales_2024 = pd.read_csv(data_folder / 'preofe2024.csv', delimiter=';', parse_dates=['Fecha'], dayfirst=True, encoding='ISO-8859-1')
 
-    # Realizar predicciones en el conjunto de prueba
-    y_pred = model.predict(X_test)
+volumen_2016 = pd.read_csv(data_folder / 'Reservas2016.csv', delimiter=';', parse_dates=['Fecha'], dayfirst=True, encoding='ISO-8859-1')
+volumen_2024 = pd.read_csv(data_folder / 'Reservas2024.csv', delimiter=';', parse_dates=['Fecha'], dayfirst=True, encoding='ISO-8859-1')
 
-    # Evaluar el modelo
-    mse = mean_squared_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
+# Mostrar las primeras filas de cada dataframe para confirmar la carga correcta (opcional)
+print("Caudal 2016:\n", caudal_2016.head())
+print("Caudal 2024:\n", caudal_2024.head())
+print("MPO 2016:\n", mpo_2016.head())
+print("MPO 2024:\n", mpo_2024.head())
+print("MPO Calculado 2024:\n", mpo_calculado_2024.head())
+print("Precios Ideales 2016:\n", precios_ideales_2016.head())
+print("Precios Ideales 2024:\n", precios_ideales_2024.head())
+print("Volumen 2016:\n", volumen_2016.head())
+print("Volumen 2024:\n", volumen_2024.head())
 
-    return y_test, y_pred, mse, r2
+# Aquí podrías continuar con la limpieza y preparación de datos o el análisis adicional
+# Esto depende de cómo planeas integrar estos datos en el modelo.

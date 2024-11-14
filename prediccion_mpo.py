@@ -1,77 +1,49 @@
 import pandas as pd
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler
-import joblib
-import numpy as np
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+from pathlib import Path
+import warnings
 
-# Entrenar el modelo solo una vez y guardarlo para futuras predicciones
-def entrenar_modelo():
-    # Cargar y preparar los datos
-    dataset_calculado_2024 = pd.read_csv('data/Datasetcalculado2024.csv', delimiter=';', encoding='ISO-8859-1')
-    
-    # Selección de variables (features y target)
-    X = dataset_calculado_2024[['Precio ofertado', 'Valor', 'Ajuste', 'Precio ajustado']]
-    y = dataset_calculado_2024['MPO']
+# Supresión de advertencias de ajuste del modelo
+warnings.filterwarnings("ignore")
 
-    # Eliminar filas con valores faltantes
-    X = X.dropna()
-    y = y[X.index]
+# Ruta a los datos combinados
+data_folder = Path('data')
+data_2016_path = data_folder / 'consolidated_2016.csv'
+data_2024_path = data_folder / 'consolidated_2024.csv'
 
-    # Normalización
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+# Cargar los datos con configuración de codificación
+data_2016 = pd.read_csv(data_2016_path, parse_dates=['FechaHora'], index_col='FechaHora', encoding='ISO-8859-1')
+data_2024 = pd.read_csv(data_2024_path, parse_dates=['FechaHora'], index_col='FechaHora', encoding='ISO-8859-1')
 
-    # Entrenamiento del modelo
-    model = LinearRegression()
-    model.fit(X_scaled, y)
+# Asegurarse de que los índices de tiempo estén en frecuencia horaria
+y = data_2016['MPO']
+y.index = pd.date_range(start=y.index[0], end=y.index[-1], freq='H')
 
-    # Guardar el modelo y el scaler para usarlos en el futuro
-    joblib.dump(model, 'modelo_mpo.pkl')
-    joblib.dump(scaler, 'scaler_mpo.pkl')
+# Variables exógenas (asegurando que tengan la misma frecuencia de índice que y)
+exog = data_2016.drop(columns=['MPO'])
+exog = exog.resample('H').ffill().bfill()  # Rellena NaN y asegura frecuencia horaria
 
-# Función para predecir el MPO para cada hora en un día futuro usando los datos históricos como referencia
-def predecir_mpo_futuro(fecha):
-    # Cargar el modelo y el scaler
-    model = joblib.load('modelo_mpo.pkl')
-    scaler = joblib.load('scaler_mpo.pkl')
+# División de datos para entrenamiento y prueba
+train_end = int(len(y) * 0.8)
+y_train, y_test = y[:train_end], y[train_end:]
+exog_train, exog_test = exog[:train_end], exog[train_end:]
 
-    # Para predecir una fecha futura, generaremos las entradas correspondientes para ese día
-    # Aquí asumimos que las características históricas se mantendrán relativamente similares.
-    # Por ejemplo, si tenemos características promedio o valores fijos, podemos usarlos para predicciones futuras.
-    # A continuación generaremos un dataframe con 24 entradas (una por cada hora del día).
+# Definir parámetros del modelo SARIMAX
+p, d, q = 1, 1, 1
+P, D, Q, s = 1, 1, 1, 24  # Ajustes de estacionalidad diaria
 
-    # Datos ficticios para las características del modelo
-    # Puedes ajustar estos valores basándote en la media o la mediana de los datos históricos.
-    # Aquí utilizo valores promedio para generar predicciones.
-    promedio_precio_ofertado = 690.1761599  # Valor promedio de "Precio ofertado" (puedes cambiarlo por el valor real calculado)
-    promedio_valor = 500000  # Valor promedio de "Valor" (puedes ajustarlo)
-    promedio_ajuste = 615.2351599  # Valor promedio de "Ajuste" (puedes cambiarlo por el valor real calculado)
-    promedio_precio_ajustado = 615.2351599  # Valor promedio de "Precio ajustado"
+# Crear y ajustar el modelo SARIMAX
+model = SARIMAX(y_train, exog=exog_train, order=(p, d, q), seasonal_order=(P, D, Q, s))
+model_fit = model.fit(disp=False)
 
-    # Crear un DataFrame con 24 filas (una para cada hora del día)
-    horas = list(range(24))
-    datos_futuros = pd.DataFrame({
-        'Hora': horas,
-        'Precio ofertado': [promedio_precio_ofertado] * 24,
-        'Valor': [promedio_valor] * 24,
-        'Ajuste': [promedio_ajuste] * 24,
-        'Precio ajustado': [promedio_precio_ajustado] * 24
-    })
+# Generar predicciones
+pred = model_fit.predict(start=y_test.index[0], end=y_test.index[-1], exog=exog_test)
 
-    # Seleccionar las columnas necesarias para las predicciones
-    X_futuro = datos_futuros[['Precio ofertado', 'Valor', 'Ajuste', 'Precio ajustado']]
+# Crear un DataFrame para comparar valores reales y predichos
+predicciones = pd.DataFrame({'FechaHora': y_test.index, 'MPO_real': y_test, 'MPO_prediccion': pred})
 
-    # Normalizar los datos
-    X_futuro_scaled = scaler.transform(X_futuro)
+# Guardar las predicciones en un archivo CSV
+output_path = data_folder / 'predicciones_mpo.csv'
+predicciones.to_csv(output_path, index=False)
 
-    # Realizar las predicciones para cada hora del día futuro
-    predicciones = model.predict(X_futuro_scaled)
-
-    # Añadir las predicciones al DataFrame original
-    datos_futuros['MPO Predicho'] = predicciones
-    datos_futuros['Fecha'] = fecha  # Añadir la fecha seleccionada
-
-    return datos_futuros[['Fecha', 'Hora', 'MPO Predicho']]  # Retorna solo las horas y los MPO predichos
-
-# Entrena el modelo solo una vez (comenta esta línea después de entrenar)
-entrenar_modelo()
+print(f"Predicciones guardadas en: {output_path}")
