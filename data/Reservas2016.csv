@@ -1,4 +1,4 @@
-Fecha;Region Hidrologica;Nombre Embalse;Volumen Útil Diario Mm3;Volumen Útil Diario Energía kWh;Volumen Útil Díario %;Volumen Mm3;Volumen Energía kWh;Volumen %
+Fecha;Region Hidrologica;Nombre Embalse;Volumen util Diario Mm3;Volumen util Diario Energia kWh;Volumen util Diario %;Volumen Mm3;Volumen Energia kWh;Volumen %
 1/02/2016;ANTIOQUIA;AMANI;223.060;124489800.000;0.505;272.980;152350100.000;0.556
 1/02/2016;ANTIOQUIA;MIRAFLORES;60.654;191891100.000;0.628;66.294;209734300.000;0.649
 1/02/2016;ANTIOQUIA;PENOL;584.312;2386096500.000;0.582;652.782;2665700600.000;0.609

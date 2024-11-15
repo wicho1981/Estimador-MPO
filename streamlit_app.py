@@ -104,7 +104,7 @@ if selected_section == 'Históricos':
 # Sección de Calculados
 elif selected_section == 'Calculados':
     st.title("Datos Calculados")
-    st.write("Esta sección muestra los datos calculados de MPO ajustado para un día específico.")
+    st.write("Esta sección muestra los datos calculados de MPO ajustado bajo los criterios de la resolución CREG 701 049 del 2024 para un día específico.")
 
     st.subheader("Gráfica de líneas para el Precio Ajustado durante un día específico")
 
@@ -127,7 +127,8 @@ elif selected_section == 'Calculados':
         st.plotly_chart(line_chart_calculado, use_container_width=True)
 
 # -------------------------------------------------------------------------
-# Sección de Predecidos con opción de Test para generar datos aleatorios
+# -------------------------------------------------------------------------
+# Sección de Predecidos con opciones de Modelo y Test
 if selected_section == 'Predecidos':
     st.title("Predicción del MPO para un Día Completo")
 
@@ -135,9 +136,20 @@ if selected_section == 'Predecidos':
     fecha_seleccionada = st.date_input("Selecciona una fecha para predecir el MPO")
     fecha_seleccionada_str = fecha_seleccionada.strftime('%d/%m/%Y')
 
-    # Botón para activar la simulación con datos aleatorios
-    if st.button("Generar Predicción (Simulación de Test)"):
-        st.write(f"Simulación de predicción para el día {fecha_seleccionada_str} basados en datos históricos.")
+    # Radio button para seleccionar entre Modelo SARIMAX o Simulación de Test
+    tipo_prediccion = st.radio("Selecciona el tipo de predicción:", ["Modelo SARIMAX", "Simulación Test"])
+
+    if tipo_prediccion == "Modelo SARIMAX":
+        st.subheader("Predicción con Modelo SARIMAX")
+        
+        # Aquí agregas el código del modelo SARIMAX si ya está implementado.
+        # Comenta o reemplaza las siguientes líneas con el código real del modelo
+        st.write(f"Predicción con el modelo SARIMAX para el día {fecha_seleccionada_str}.")
+        # Aquí puedes ejecutar el modelo SARIMAX y mostrar las predicciones (actualmente comentado)
+
+    elif tipo_prediccion == "Simulación Test":
+        st.subheader("Simulación de Test con Datos Aleatorios")
+        st.write(f"Simulación de predicción para el día {fecha_seleccionada_str} basada en datos históricos.")
 
         # Función para generar valores aleatorios de predicción (simulación)
         def generate_random_predictions(fecha_seleccionada, data):
