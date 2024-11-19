@@ -6,6 +6,19 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 import numpy as np
 from datetime import datetime, timedelta
 
+import os
+import subprocess
+
+# Instalar PyTorch si no está disponible
+try:
+    import torch
+except ImportError:
+    subprocess.check_call(
+        ["pip", "install", "torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu"]
+    )
+    import torch
+
+
 def cargar_datos():
     data = pd.read_csv("data/combined_data_2016.csv")
     selected_features = [col for col in data.columns if col.startswith("Embalse_")]
@@ -137,4 +150,3 @@ y_pred, mse, mae, r2 = evaluar_modelo_postentrenamiento(anfis_model, X, y, scale
 # Generar predicciones para los años deseados
 for year in [2016, 2024, 2025]:
     generar_predicciones_anuales(anfis_model, scaler_X, scaler_y, selected_features, year)
-1
