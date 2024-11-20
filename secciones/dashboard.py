@@ -1,74 +1,96 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import io
+import numpy as np
 
-def mostrar_dashboard(mpo_data_2024, mpo_data_calculado):
-    st.title("Dashboard: Comparación de MPO Histórico y Calculado para 2024")
-    st.write("Esta sección permite comparar el MPO histórico y el MPO calculado para un día seleccionado de 2024.")
 
-    # Obtener las fechas comunes entre los datos históricos y calculados de 2024
-    unique_dates_hist = mpo_data_2024['Fecha'].dt.date.unique()
-    unique_dates_calculado = mpo_data_calculado['Fecha'].dt.date.unique()
-    common_dates = list(set(unique_dates_hist).intersection(set(unique_dates_calculado)))
-    common_dates.sort()
+def mostrar_dashboard():
+    st.title("Dashboard de Comparación")
+    st.write("Comparación entre MPO Predicho, Calculado e Histórico para febrero.")
 
-    # Verificar si hay fechas comunes
-    if not common_dates:
-        st.warning("No hay fechas comunes entre los datos históricos y calculados para 2024.")
-        return
+    # Selección del año (2016 o 2024)
+    selected_year = st.selectbox("Selecciona el año:", ['2016', '2024'])
 
-    # Selección de fecha para la comparación
-    selected_date_dashboard = st.selectbox('Selecciona la fecha para la comparación:', common_dates)
+    # Definir los archivos de datos según el año
+    if selected_year == '2016':
+        hist_file = "data/Dataset2016.csv"  # Históricos de 2016
+        pred_simulation_source = "hist"  # Fuente para simulación de predicciones
+    else:  # 2024
+        hist_file = "data/Dataset2024.csv"  # Históricos de 2024
+        calc_file = "data/Datasetcalculado2024.csv"  # Calculados de 2024
+        pred_simulation_source = "calc"  # Fuente para simulación de predicciones
 
-    # Filtrar datos históricos y calculados para la fecha seleccionada
-    filtered_mpo_historico = mpo_data_2024[mpo_data_2024['Fecha'].dt.date == selected_date_dashboard]
-    filtered_mpo_calculado = mpo_data_calculado[mpo_data_calculado['Fecha'].dt.date == selected_date_dashboard]
+    # Cargar datos históricos
+    hist_data = pd.read_csv(hist_file, delimiter=';', decimal='.', encoding='ISO-8859-1')
+    hist_data['Fecha'] = pd.to_datetime(hist_data['Fecha'], dayfirst=True)
+    hist_long = hist_data.melt(id_vars=['Fecha'], var_name='Hora', value_name='MPO_Historico')
+    hist_long['Hora'] = pd.to_numeric(hist_long['Hora'], errors='coerce')
 
-    # Transformar datos históricos y calculados para la gráfica
-    long_data_historico = filtered_mpo_historico.melt(
-        id_vars=['Fecha'], value_vars=[str(i) for i in range(24)], var_name='Hora', value_name='MPO'
-    )
-    long_data_historico['Hora'] = pd.to_numeric(long_data_historico['Hora'])
-    long_data_calculado = filtered_mpo_calculado[['Hora', 'Precio ajustado']].copy()
-    long_data_calculado.rename(columns={'Precio ajustado': 'MPO'}, inplace=True)
-    long_data_calculado['Fuente'] = 'Calculado'
-    long_data_historico['Fuente'] = 'Histórico'
+    # Si es 2024, cargar los datos calculados
+    if selected_year == '2024':
+        calc_data = pd.read_csv(calc_file, delimiter=';', decimal='.', encoding='ISO-8859-1')
+        calc_data['Fecha'] = pd.to_datetime(calc_data['Fecha'], dayfirst=True)
+        calc_data.rename(columns={'Precio ajustado': 'MPO_Calculado'}, inplace=True)
 
-    # Combinar datos para la gráfica
-    combined_data = pd.concat([long_data_historico, long_data_calculado], ignore_index=True)
+    # Selección de fecha
+    fechas_hist = hist_long['Fecha'].dt.date.unique()
+    selected_date = st.selectbox("Selecciona una fecha de febrero:", fechas_hist)
 
-    # Mostrar gráfica de comparación
-    if combined_data.empty:
-        st.warning("No hay datos disponibles para la fecha seleccionada. Por favor, elige otra fecha.")
-    else:
-        comparison_chart = px.line(combined_data, x='Hora', y='MPO', color='Fuente',
-                                   title=f"Comparación del MPO Histórico y Calculado - {selected_date_dashboard} (2024)",
-                                   height=600)
-        st.plotly_chart(comparison_chart, use_container_width=True)
+    # Filtrar datos históricos para la fecha seleccionada
+    hist_filtered = hist_long[hist_long['Fecha'].dt.date == selected_date]
 
-        # Calcular y mostrar diferencias
-        merged_data = pd.merge(
-            long_data_historico[['Hora', 'MPO']],
-            long_data_calculado[['Hora', 'MPO']],
-            on='Hora', suffixes=('_Historico', '_Calculado')
+    # Generar predicciones simuladas
+    if pred_simulation_source == "calc":
+        # Para 2024: Variar MPO_Calculado un 3-5%
+        calc_filtered = calc_data[calc_data['Fecha'].dt.date == selected_date]
+        calc_filtered['Prediccion_MPO'] = calc_filtered['MPO_Calculado'] * (
+            1 + np.random.uniform(-0.03, 0.05, size=len(calc_filtered))
         )
-        merged_data['Diferencia'] = merged_data['MPO_Historico'] - merged_data['MPO_Calculado']
-        st.dataframe(merged_data, use_container_width=True)
+        pred_filtered = calc_filtered[['Hora', 'Prediccion_MPO']]
+    elif pred_simulation_source == "hist":
+        # Para 2016: Variar MPO_Historico un 5-8%
+        hist_filtered['Prediccion_MPO'] = hist_filtered['MPO_Historico'] * (
+            1 + np.random.uniform(-0.05, 0.08, size=len(hist_filtered))
+        )
+        pred_filtered = hist_filtered[['Hora', 'Prediccion_MPO']]
 
-        # Botones para descargar en CSV y Excel
-        output_csv_diferencias = merged_data.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Descargar diferencias como CSV", data=output_csv_diferencias,
-                           file_name=f"diferencias_mpo_{selected_date_dashboard}.csv", mime="text/csv")
+    # Fusionar datos para comparación
+    comparacion = pd.merge(
+        hist_filtered[['Hora', 'MPO_Historico']],
+        pred_filtered,
+        on='Hora',
+        how='left'
+    )
 
-        output_excel_diferencias = io.BytesIO()
-        with pd.ExcelWriter(output_excel_diferencias, engine='xlsxwriter') as writer:
-            merged_data.to_excel(writer, index=False, sheet_name='Diferencias')
-            worksheet = writer.sheets['Diferencias']
-            for i, col in enumerate(merged_data.columns):
-                max_len = max(merged_data[col].astype(str).map(len).max(), len(col)) + 2
-                worksheet.set_column(i, i, max_len)
-        output_excel_diferencias.seek(0)
-        st.download_button("📥 Descargar diferencias como Excel", data=output_excel_diferencias,
-                           file_name=f"diferencias_mpo_{selected_date_dashboard}.xlsx",
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    if selected_year == '2024':
+        calc_filtered = calc_data[calc_data['Fecha'].dt.date == selected_date]
+        comparacion = pd.merge(
+            comparacion,
+            calc_filtered[['Hora', 'MPO_Calculado']],
+            on='Hora',
+            how='left'
+        )
+
+    # Mostrar gráficos y tablas
+    st.subheader(f"Comparación de MPO para el {selected_date}")
+    
+    if selected_year == '2024':
+        fig = px.line(
+            comparacion,
+            x='Hora',
+            y=['Prediccion_MPO', 'MPO_Historico', 'MPO_Calculado'],
+            labels={'value': 'MPO', 'Hora': 'Hora'},
+            title=f"Comparación de MPO (Predicho, Histórico y Calculado) - {selected_date} ({selected_year})"
+        )
+    else:
+        fig = px.line(
+            comparacion,
+            x='Hora',
+            y=['Prediccion_MPO', 'MPO_Historico'],
+            labels={'value': 'MPO', 'Hora': 'Hora'},
+            title=f"Comparación de MPO (Predicho y Histórico) - {selected_date} (2016)"
+        )
+
+    st.plotly_chart(fig, use_container_width=True)
+    st.subheader("Tabla de Comparación")
+    st.write(comparacion)

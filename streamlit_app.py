@@ -28,7 +28,7 @@ selected_section = st.selectbox('Selecciona la sección:', ['Dashboard', 'Histó
 
 # Mostrar la sección seleccionada
 if selected_section == 'Dashboard':
-    mostrar_dashboard(mpo_data_2024, mpo_data_calculado)
+    mostrar_dashboard()
 elif selected_section == 'Históricos':
     mostrar_historicos(mpo_data_2016, mpo_data_2024)
 elif selected_section == 'Calculados':
