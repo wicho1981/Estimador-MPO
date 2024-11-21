@@ -7,10 +7,10 @@ from secciones.historicos import mostrar_historicos
 from secciones.calculados import mostrar_calculados
 from secciones.predecidos import mostrar_predecidos
 
-# Configuración de la página
-st.set_page_config(page_title='Visor de Datos MPO', page_icon=':electric_plug:', layout='wide')
+# Page configuration
+st.set_page_config(page_title='MPO Data Viewer', page_icon=':electric_plug:', layout='wide')
 
-# Cargar datos
+# Load data
 mpo_data_2016 = pd.read_csv("data/Dataset2016.csv", delimiter=';', decimal='.', encoding='ISO-8859-1')
 mpo_data_2016['Fecha'] = pd.to_datetime(mpo_data_2016['Fecha'], dayfirst=True)
 
@@ -20,18 +20,18 @@ mpo_data_2024['Fecha'] = pd.to_datetime(mpo_data_2024['Fecha'], dayfirst=True)
 mpo_data_calculado = pd.read_csv("data/Datasetcalculado2024.csv", delimiter=';', decimal='.', encoding='ISO-8859-1')
 mpo_data_calculado['Fecha'] = pd.to_datetime(mpo_data_calculado['Fecha'], dayfirst=True)
 
-# Mostrar cabecera
+# Show header
 mostrar_cabecera()
 
-# Menú de selección de sección
-selected_section = st.selectbox('Selecciona la sección:', ['Dashboard', 'Históricos', 'Calculados', 'Predecidos'])
+# Section selection menu
+selected_section = st.selectbox('Select the section:', ['Dashboard', 'Historical Data', 'Calculated Data', 'Predicted Data'])
 
-# Mostrar la sección seleccionada
+# Display the selected section
 if selected_section == 'Dashboard':
     mostrar_dashboard()
-elif selected_section == 'Históricos':
+elif selected_section == 'Historical Data':
     mostrar_historicos(mpo_data_2016, mpo_data_2024)
-elif selected_section == 'Calculados':
+elif selected_section == 'Calculated Data':
     mostrar_calculados(mpo_data_calculado)
-elif selected_section == 'Predecidos':
+elif selected_section == 'Predicted Data':
     mostrar_predecidos()

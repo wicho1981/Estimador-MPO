@@ -3,50 +3,50 @@ import pandas as pd
 from datetime import datetime
 
 def mostrar_predecidos():
-    st.title("Predicción del MPO para un Día Completo")
+    st.title("MPO Prediction for a Full Day")
     
-    # Selección de año (solo 2025)
-    año = 2025
-    file_path = f"data/predicciones_mpo_{año}.csv"
+    # Year selection (only 2025)
+    year = 2025
+    file_path = f"data/predicciones_mpo_{year}.csv"
 
     try:
-        pred_key = f"predicciones_{año}"  # Clave para almacenar en `st.session_state`
+        pred_key = f"predictions_{year}"  # Key to store in `st.session_state`
 
-        # Verificar si las predicciones ya están cargadas en `st.session_state`
+        # Check if predictions are already loaded in `st.session_state`
         if pred_key not in st.session_state:
             predicciones_df = pd.read_csv(file_path)
             predicciones_df['FechaHora'] = pd.to_datetime(predicciones_df['FechaHora'])
-            st.session_state[pred_key] = predicciones_df  # Guardar en la sesión
+            st.session_state[pred_key] = predicciones_df  # Save to session
         else:
             predicciones_df = st.session_state[pred_key]
 
-        # Obtener las fechas disponibles en el archivo de predicciones
-        fechas_disponibles = predicciones_df['FechaHora'].dt.date.unique()
+        # Get available dates in the predictions file
+        available_dates = predicciones_df['FechaHora'].dt.date.unique()
 
-        # Selección de día específico dentro del año seleccionado
-        fecha_prediccion = st.date_input(
-            "Selecciona el día para visualizar el MPO:",
-            min_value=min(fechas_disponibles),
-            max_value=max(fechas_disponibles),
-            value=min(fechas_disponibles)
+        # Specific day selection within the chosen year
+        prediction_date = st.date_input(
+            "Select the day to view MPO:",
+            min_value=min(available_dates),
+            max_value=max(available_dates),
+            value=min(available_dates)
         )
         
-        # Filtrar las predicciones para el día seleccionado
-        predicciones_dia = predicciones_df[predicciones_df['FechaHora'].dt.date == fecha_prediccion]
+        # Filter predictions for the selected day
+        day_predictions = predicciones_df[predicciones_df['FechaHora'].dt.date == prediction_date]
 
-        if not predicciones_dia.empty:
-            # Mostrar gráfico de predicciones horarios para el día seleccionado
-            st.subheader(f"Predicciones de MPO para el {fecha_prediccion.strftime('%Y-%m-%d')}")
-            st.line_chart(predicciones_dia.set_index("FechaHora")["Prediccion_MPO"], use_container_width=True)
+        if not day_predictions.empty:
+            # Display hourly prediction chart for the selected day
+            st.subheader(f"MPO Predictions for {prediction_date.strftime('%Y-%m-%d')}")
+            st.line_chart(day_predictions.set_index("FechaHora")["Prediccion_MPO"], use_container_width=True)
             
-            # Tabla con solo las horas y los MPO predichos
-            tabla_predicciones = predicciones_dia[['FechaHora', 'Prediccion_MPO']].copy()
-            tabla_predicciones['Hora'] = tabla_predicciones['FechaHora'].dt.hour
-            tabla_predicciones = tabla_predicciones[['Hora', 'Prediccion_MPO']]
-            st.write(tabla_predicciones)
+            # Table with only hours and predicted MPOs
+            predictions_table = day_predictions[['FechaHora', 'Prediccion_MPO']].copy()
+            predictions_table['Hour'] = predictions_table['FechaHora'].dt.hour
+            predictions_table = predictions_table[['Hour', 'Prediccion_MPO']]
+            st.write(predictions_table)
         else:
-            st.warning("No se encontraron predicciones para la fecha seleccionada.")
+            st.warning("No predictions found for the selected date.")
     except FileNotFoundError:
-        st.error(f"No se encontró el archivo de predicciones para el año {año}.")
+        st.error(f"Predictions file for the year {year} not found.")
     except Exception as e:
-        st.error(f"Ocurrió un error al cargar las predicciones: {e}")
+        st.error(f"An error occurred while loading the predictions: {e}")

@@ -26,8 +26,8 @@ def mostrar_cabecera():
         st.markdown(
             """
             <div style='text-align: right;'>
-                <h2 style='margin-bottom: 5px; color: #333333; font-size: 1.6em;'>Estimación del Máximo Precio Ofertado en el Mercado de Energía Mayorista Colombiano apoyado en IA</h2>
-                <p style='margin-top: 0px; color: #555555; font-size: 1.2em; font-style: italic;'>Autores: Cristian Noguera & Jaider Sanchez</p>
+                <h2 style='margin-bottom: 5px; color: #333333; font-size: 1.6em;'>Estimation of the Maximum Offered Price in the Colombian Wholesale Energy Market Supported by AI</h2>
+                <p style='margin-top: 0px; color: #555555; font-size: 1.2em; font-style: italic;'>Authors: Cristian Noguera & Jaider Sanchez</p>
             </div>
             """,
             unsafe_allow_html=True
