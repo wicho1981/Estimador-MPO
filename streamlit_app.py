@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from data.entrenar_y_predecir import cargar_datos
+from entrenar_y_predecir import cargar_datos
 from secciones.cabecera import mostrar_cabecera
 from secciones.dashboard import mostrar_dashboard
 from secciones.historicos import mostrar_historicos

@@ -125,6 +125,6 @@ def generar_predicciones_anuales(anfis_model, scaler_X, scaler_y, selected_featu
     pass
 
 # Ejecución principal
-X, y, scaler_X, scaler_y, selected_features = cargar_datos()
-anfis_model, val_loader = entrenar_modelo(X, y, n_inputs=X.shape[1], n_mf=2, n_epochs=200, batch_size=32, lr=0.005)
-metricas = evaluar_modelo(anfis_model, val_loader, scaler_y)
+#X, y, scaler_X, scaler_y, selected_features = cargar_datos()
+#anfis_model, val_loader = entrenar_modelo(X, y, n_inputs=X.shape[1], n_mf=2, n_epochs=200, batch_size=32, lr=0.005)
+#metricas = evaluar_modelo(anfis_model, val_loader, scaler_y)
