@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import numpy as np
+from io import BytesIO
 
 def mostrar_dashboard():
     st.title("MPO Dashboard")
@@ -78,7 +79,7 @@ def mostrar_dashboard():
             comparacion,
             x='Hora',
             y=['Prediccion_MPO', 'MPO_Historico', 'MPO_Calculado'],
-            labels={'value': 'MPO', 'Hora': 'Hour'},
+            labels={'value': 'MPO (COP/kWh)', 'Hora': 'Hour'},
             title=f"MPO Comparison (Predicted, Historical, and Calculated) - {selected_date} ({selected_year})"
         )
     else:
@@ -86,10 +87,41 @@ def mostrar_dashboard():
             comparacion,
             x='Hora',
             y=['Prediccion_MPO', 'MPO_Historico'],
-            labels={'value': 'MPO', 'Hora': 'Hour'},
+            labels={'value': 'MPO (COP/kWh)', 'Hora': 'Hour'},
             title=f"MPO Comparison (Predicted and Historical) - {selected_date} (2016)"
         )
 
+    # Display the chart
     st.plotly_chart(fig, use_container_width=True)
+
+    # Prepare table
+    comparacion.index = [''] * len(comparacion)  # Make index invisible
     st.subheader("Comparison Table")
-    st.write(comparacion)
+    st.dataframe(comparacion)
+
+    # Download buttons
+    st.subheader("Download Comparison Data")
+    col1, col2, col3, col4 = st.columns([1, 2, 2, 1])
+
+    with col2:
+        # CSV download
+        csv = comparacion.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download as CSV",
+            data=csv,
+            file_name=f"comparison_{selected_date}.csv",
+            mime='text/csv'
+        )
+
+    with col3:
+        # Excel download
+        output = BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            comparacion.to_excel(writer, index=False, sheet_name='Comparison')
+        excel_data = output.getvalue()
+        st.download_button(
+            label="Download as Excel",
+            data=excel_data,
+            file_name=f"comparison_{selected_date}.xlsx",
+            mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )

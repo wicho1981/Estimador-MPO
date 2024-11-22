@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
 from datetime import datetime
+from io import BytesIO
 
 def mostrar_predecidos():
     st.title("MPO Prediction for a Full Day")
@@ -35,15 +37,55 @@ def mostrar_predecidos():
         day_predictions = predicciones_df[predicciones_df['FechaHora'].dt.date == prediction_date]
 
         if not day_predictions.empty:
-            # Display hourly prediction chart for the selected day
-            st.subheader(f"MPO Predictions for {prediction_date.strftime('%Y-%m-%d')}")
-            st.line_chart(day_predictions.set_index("FechaHora")["Prediccion_MPO"], use_container_width=True)
-            
-            # Table with only hours and predicted MPOs
+            # Prepare data for the chart and table
             predictions_table = day_predictions[['FechaHora', 'Prediccion_MPO']].copy()
             predictions_table['Hour'] = predictions_table['FechaHora'].dt.hour
             predictions_table = predictions_table[['Hour', 'Prediccion_MPO']]
-            st.write(predictions_table)
+
+            # Remove index numbers for the table
+            predictions_table.index = [''] * len(predictions_table)
+
+            # Display hourly prediction chart for the selected day using Plotly
+            st.subheader(f"MPO Predictions for {prediction_date.strftime('%Y-%m-%d')}")
+            fig = px.line(
+                predictions_table,
+                x='Hour',
+                y='Prediccion_MPO',
+                title=f"MPO Predictions for {prediction_date.strftime('%Y-%m-%d')}",
+                labels={'Hour': 'Hour', 'Prediccion_MPO': 'Predicted MPO (COP/kWh)'}
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            # Display table with hours and predicted MPOs
+            st.subheader("Prediction Data")
+            st.dataframe(predictions_table)
+
+            # Buttons for downloading the data
+            st.subheader("Download Prediction Data")
+            col1, col2, col3, col4 = st.columns([1, 2, 2, 1])  # Create columns to center buttons
+
+            with col2:
+                # CSV Download Button
+                csv = predictions_table.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="Download as CSV",
+                    data=csv,
+                    file_name=f"predictions_{prediction_date.strftime('%Y-%m-%d')}.csv",
+                    mime='text/csv'
+                )
+
+            with col3:
+                # Excel Download Button
+                output = BytesIO()
+                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                    predictions_table.to_excel(writer, index=False, sheet_name='Predictions')
+                excel_data = output.getvalue()
+                st.download_button(
+                    label="Download as Excel",
+                    data=excel_data,
+                    file_name=f"predictions_{prediction_date.strftime('%Y-%m-%d')}.xlsx",
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
         else:
             st.warning("No predictions found for the selected date.")
     except FileNotFoundError:
