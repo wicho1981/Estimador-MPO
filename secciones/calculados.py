@@ -5,7 +5,13 @@ from io import BytesIO
 
 def mostrar_calculados(mpo_data_calculado):
     st.title("Calculated MPO Data")
-    st.write("Visualization of adjusted calculated MPO data.")
+    st.write(
+        """
+        In this section, you can visualize the adjusted offered price information 
+        under the methodology proposed by CREG resolution project 701 049 
+        for February 2024 and 2016 dates.
+        """
+    )
 
     # Obtener las fechas únicas para el selector
     unique_dates = mpo_data_calculado['Fecha'].dt.date.unique()

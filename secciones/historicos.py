@@ -5,7 +5,12 @@ from io import BytesIO
 
 def mostrar_historicos(mpo_data_2016, mpo_data_2024):
     st.title("Historical MPO Data")
-    st.write("Visualization of historical MPO data.")
+    st.write(
+        """
+        In this section, you can visualize historical MPO data for February 2016 
+        and 2024, extracted from the XM information portal.
+        """
+    )
     
     # Selección de año
     selected_year = st.selectbox('Select the year:', ['2016', '2024'])

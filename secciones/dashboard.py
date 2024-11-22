@@ -6,7 +6,12 @@ from io import BytesIO
 
 def mostrar_dashboard():
     st.title("MPO Dashboard")
-    st.write("Comparison between Predicted, Calculated, and Historical MPO for February.")
+    st.write(
+        """
+        In this dashboard, you can compare the maximum offered price calculated, 
+        predicted, and historical MPO for February dates in 2016 and 2024.
+        """
+    )
 
     # Year selection (2016 or 2024)
     selected_year = st.selectbox("Select the year:", ['2016', '2024'])
