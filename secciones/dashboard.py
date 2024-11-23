@@ -6,12 +6,7 @@ from io import BytesIO
 
 def mostrar_dashboard():
     st.title("MPO Dashboard")
-    st.write(
-        """
-        In this dashboard, you can compare the maximum offered price calculated, 
-        predicted, and historical MPO for February dates in 2016 and 2024.
-        """
-    )
+    st.write("Comparison between Predicted, Calculated, and Historical MPO for February.")
 
     # Year selection (2016 or 2024)
     selected_year = st.selectbox("Select the year:", ['2016', '2024'])
@@ -19,7 +14,8 @@ def mostrar_dashboard():
     # Define data files based on the year
     if selected_year == '2016':
         hist_file = "data/Dataset2016.csv"  # 2016 Historical data
-        pred_simulation_source = "hist"  # Source for prediction simulation
+        calc_file = "data/Datasetcalculado2016.csv"  # 2016 Calculated data
+        pred_simulation_source = "calc"  # Source for prediction simulation
     else:  # 2024
         hist_file = "data/Dataset2024.csv"  # 2024 Historical data
         calc_file = "data/Datasetcalculado2024.csv"  # 2024 Calculated data
@@ -31,11 +27,10 @@ def mostrar_dashboard():
     hist_long = hist_data.melt(id_vars=['Fecha'], var_name='Hora', value_name='MPO_Historico')
     hist_long['Hora'] = pd.to_numeric(hist_long['Hora'], errors='coerce')
 
-    # If 2024, load calculated data
-    if selected_year == '2024':
-        calc_data = pd.read_csv(calc_file, delimiter=';', decimal='.', encoding='ISO-8859-1')
-        calc_data['Fecha'] = pd.to_datetime(calc_data['Fecha'], dayfirst=True)
-        calc_data.rename(columns={'Precio ajustado': 'MPO_Calculado'}, inplace=True)
+    # Load calculated data
+    calc_data = pd.read_csv(calc_file, delimiter=';', decimal='.', encoding='ISO-8859-1')
+    calc_data['Fecha'] = pd.to_datetime(calc_data['Fecha'], dayfirst=True)
+    calc_data.rename(columns={'Precio ajustado': 'MPO_Calculado'}, inplace=True)
 
     # Date selection
     fechas_hist = hist_long['Fecha'].dt.date.unique()
@@ -45,19 +40,11 @@ def mostrar_dashboard():
     hist_filtered = hist_long[hist_long['Fecha'].dt.date == selected_date]
 
     # Generate simulated predictions
-    if pred_simulation_source == "calc":
-        # For 2024: Vary MPO_Calculado by 3-5%
-        calc_filtered = calc_data[calc_data['Fecha'].dt.date == selected_date]
-        calc_filtered['Prediccion_MPO'] = calc_filtered['MPO_Calculado'] * (
-            1 + np.random.uniform(-0.03, 0.05, size=len(calc_filtered))
-        )
-        pred_filtered = calc_filtered[['Hora', 'Prediccion_MPO']]
-    elif pred_simulation_source == "hist":
-        # For 2016: Vary MPO_Historico by 5-8%
-        hist_filtered['Prediccion_MPO'] = hist_filtered['MPO_Historico'] * (
-            1 + np.random.uniform(-0.05, 0.08, size=len(hist_filtered))
-        )
-        pred_filtered = hist_filtered[['Hora', 'Prediccion_MPO']]
+    calc_filtered = calc_data[calc_data['Fecha'].dt.date == selected_date]
+    calc_filtered['Prediccion_MPO'] = calc_filtered['MPO_Calculado'] * (
+        1 + np.random.uniform(-0.03, 0.05, size=len(calc_filtered))
+    )
+    pred_filtered = calc_filtered[['Hora', 'Prediccion_MPO']]
 
     # Merge data for comparison
     comparacion = pd.merge(
@@ -67,34 +54,23 @@ def mostrar_dashboard():
         how='left'
     )
 
-    if selected_year == '2024':
-        calc_filtered = calc_data[calc_data['Fecha'].dt.date == selected_date]
-        comparacion = pd.merge(
-            comparacion,
-            calc_filtered[['Hora', 'MPO_Calculado']],
-            on='Hora',
-            how='left'
-        )
+    comparacion = pd.merge(
+        comparacion,
+        calc_filtered[['Hora', 'MPO_Calculado']],
+        on='Hora',
+        how='left'
+    )
 
     # Display charts and tables
     st.subheader(f"MPO Comparison for {selected_date}")
     
-    if selected_year == '2024':
-        fig = px.line(
-            comparacion,
-            x='Hora',
-            y=['Prediccion_MPO', 'MPO_Historico', 'MPO_Calculado'],
-            labels={'value': 'MPO (COP/kWh)', 'Hora': 'Hour'},
-            title=f"MPO Comparison (Predicted, Historical, and Calculated) - {selected_date} ({selected_year})"
-        )
-    else:
-        fig = px.line(
-            comparacion,
-            x='Hora',
-            y=['Prediccion_MPO', 'MPO_Historico'],
-            labels={'value': 'MPO (COP/kWh)', 'Hora': 'Hour'},
-            title=f"MPO Comparison (Predicted and Historical) - {selected_date} (2016)"
-        )
+    fig = px.line(
+        comparacion,
+        x='Hora',
+        y=['Prediccion_MPO', 'MPO_Historico', 'MPO_Calculado'],
+        labels={'value': 'MPO (COP/kWh)', 'Hora': 'Hour'},
+        title=f"MPO Comparison (Predicted, Historical, and Calculated) - {selected_date} ({selected_year})"
+    )
 
     # Display the chart
     st.plotly_chart(fig, use_container_width=True)
@@ -130,3 +106,7 @@ def mostrar_dashboard():
             file_name=f"comparison_{selected_date}.xlsx",
             mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
+
+# Ejecutar el dashboard
+if __name__ == "__main__":
+    mostrar_dashboard()

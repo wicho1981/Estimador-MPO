@@ -2,7 +2,6 @@ import pandas as pd
 import torch
 from torch.utils.data import DataLoader, TensorDataset, random_split
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import numpy as np
 from datetime import datetime
 
@@ -81,50 +80,33 @@ def entrenar_modelo(X, y, n_inputs, n_mf=2, n_epochs=200, batch_size=32, lr=0.00
 
     torch.save(anfis_model.state_dict(), "data/anfis_model.pth")
     print("Modelo ANFIS guardado como 'anfis_model.pth'")
-    return anfis_model, val_loader
+    return anfis_model
 
-# Evaluar modelo
-def evaluar_modelo(anfis_model, val_loader, scaler_y):
-    anfis_model.eval()
-    all_predictions = []
-    all_targets = []
-    
-    with torch.no_grad():
-        for batch_X, batch_y in val_loader:
-            predictions = anfis_model(batch_X).detach().cpu().numpy()
-            targets = batch_y.detach().cpu().numpy()
-            predictions = scaler_y.inverse_transform(predictions)
-            targets = scaler_y.inverse_transform(targets)
-            all_predictions.extend(predictions.flatten())
-            all_targets.extend(targets.flatten())
-    
-    all_predictions = np.array(all_predictions)
-    all_targets = np.array(all_targets)
-    
-    mae = mean_absolute_error(all_targets, all_predictions)
-    mse = mean_squared_error(all_targets, all_predictions)
-    rmse = np.sqrt(mse)
-    r2 = r2_score(all_targets, all_predictions)
-    
-    print("=== Métricas de Evaluación ===")
-    print(f"Error Absoluto Medio (MAE): {mae:.4f}")
-    print(f"Error Cuadrático Medio (MSE): {mse:.4f}")
-    print(f"Raíz del Error Cuadrático Medio (RMSE): {rmse:.4f}")
-    print(f"Coeficiente de Determinación (R²): {r2:.4f}")
-    
-    return {
-        "MAE": mae,
-        "MSE": mse,
-        "RMSE": rmse,
-        "R2": r2
-}
-
-# Generar predicciones anuales para otros años con ajuste mensual
+# Generar predicciones anuales para 2025
 def generar_predicciones_anuales(anfis_model, scaler_X, scaler_y, selected_features, year):
-    # (Código de generación de predicciones permanece igual)
-    pass
+    start_date = datetime(year, 1, 1)
+    end_date = datetime(year, 12, 31, 23)
+    date_range = pd.date_range(start=start_date, end=end_date, freq='h')
 
-# Ejecución principal
-#X, y, scaler_X, scaler_y, selected_features = cargar_datos()
-#anfis_model, val_loader = entrenar_modelo(X, y, n_inputs=X.shape[1], n_mf=2, n_epochs=200, batch_size=32, lr=0.005)
-#metricas = evaluar_modelo(anfis_model, val_loader, scaler_y)
+    embalse_means = {feature: 0.5 for feature in selected_features}
+    simulated_data = {
+        "FechaHora": date_range,
+        **{feature: [embalse_means[feature] * (1 + np.random.uniform(-0.05, 0.05)) for _ in date_range]
+           for feature in selected_features}
+    }
+    simulated_df = pd.DataFrame(simulated_data)
+    X_future = scaler_X.transform(simulated_df[selected_features])
+    X_future_tensor = torch.tensor(X_future, dtype=torch.float32)
+
+    with torch.no_grad():
+        y_future_scaled = anfis_model(X_future_tensor).numpy()
+        y_future = scaler_y.inverse_transform(y_future_scaled)
+
+    simulated_df["Prediccion_MPO"] = y_future.flatten()
+    simulated_df.to_csv(f"data/predicciones_mpo_{year}.csv", index=False)
+    print(f"Predicciones guardadas para el año {year} en 'data/predicciones_mpo_{year}.csv'.")
+
+# Entrenamiento y generación de predicciones
+X, y, scaler_X, scaler_y, selected_features = cargar_datos()
+anfis_model = entrenar_modelo(X, y, n_inputs=X.shape[1], n_mf=2, n_epochs=200, batch_size=32, lr=0.005)
+generar_predicciones_anuales(anfis_model, scaler_X, scaler_y, selected_features, 2025)

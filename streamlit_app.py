@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-from entrenar_y_predecir import cargar_datos
 from secciones.cabecera import mostrar_cabecera
 from secciones.dashboard import mostrar_dashboard
 from secciones.historicos import mostrar_historicos
@@ -17,8 +16,11 @@ mpo_data_2016['Fecha'] = pd.to_datetime(mpo_data_2016['Fecha'], dayfirst=True)
 mpo_data_2024 = pd.read_csv("data/Dataset2024.csv", delimiter=';', decimal='.', encoding='ISO-8859-1')
 mpo_data_2024['Fecha'] = pd.to_datetime(mpo_data_2024['Fecha'], dayfirst=True)
 
-mpo_data_calculado = pd.read_csv("data/Datasetcalculado2024.csv", delimiter=';', decimal='.', encoding='ISO-8859-1')
-mpo_data_calculado['Fecha'] = pd.to_datetime(mpo_data_calculado['Fecha'], dayfirst=True)
+mpo_data_calculado2024 = pd.read_csv("data/Datasetcalculado2024.csv", delimiter=';', decimal='.', encoding='ISO-8859-1')
+mpo_data_calculado2024['Fecha'] = pd.to_datetime(mpo_data_calculado2024['Fecha'], dayfirst=True)
+
+mpo_data_calculado2016 = pd.read_csv("data/Datasetcalculado2016.csv", delimiter=';', decimal='.', encoding='ISO-8859-1')
+mpo_data_calculado2016['Fecha'] = pd.to_datetime(mpo_data_calculado2016['Fecha'], dayfirst=True)
 
 # Show header
 mostrar_cabecera()
@@ -32,6 +34,6 @@ if selected_section == 'Dashboard':
 elif selected_section == 'Historical Data':
     mostrar_historicos(mpo_data_2016, mpo_data_2024)
 elif selected_section == 'Calculated Data':
-    mostrar_calculados(mpo_data_calculado)
+    mostrar_calculados(mpo_data_calculado2024,mpo_data_calculado2016)
 elif selected_section == 'Predicted Data':
     mostrar_predecidos()

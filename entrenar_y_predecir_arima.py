@@ -1,140 +1,90 @@
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
 import numpy as np
-from statsmodels.tsa.arima.model import ARIMA
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from datetime import datetime, timedelta
-import matplotlib.pyplot as plt
+from datetime import datetime
+from statsmodels.tsa.statespace.sarimax import SARIMAX
+import warnings
+warnings.filterwarnings("ignore")
 
-# Función para cargar datos
+# Función para cargar y preparar datos
 def cargar_datos():
-    """
-    Carga el dataset y prepara la serie temporal para el modelo ARIMA.
-    """
-    # Cargar el archivo CSV con el delimitador correcto
-    data = pd.read_csv("data/combined_data_2016.csv", delimiter=',', encoding='ISO-8859-1')
-    
-    # Verifica si 'FechaHora' está presente
-    if 'FechaHora' not in data.columns:
-        raise ValueError("La columna 'FechaHora' no se encuentra en el archivo CSV.")
-    
-    # Convertir 'FechaHora' en formato datetime y establecerla como índice
-    data['FechaHora'] = pd.to_datetime(data['FechaHora'])
-    data.set_index('FechaHora', inplace=True)
-    
-    # Seleccionar la serie temporal de la variable objetivo
+    data = pd.read_csv("data/combined_data_2016.csv")
+    selected_features = [col for col in data.columns if col.startswith("Embalse_")]
+    features = data[selected_features]
     target = data["MPO"]
-    
-    return target
 
-# Entrenar Modelo ARIMA
-def entrenar_arima(series, order=(1, 1, 1)):
-    """
-    Entrena un modelo ARIMA en la serie temporal proporcionada.
-    """
-    print("Entrenando el modelo ARIMA...")
-    model = ARIMA(series, order=order)
-    model_fit = model.fit()
-    print(model_fit.summary())
+    # Escalado de características
+    scaler_X = MinMaxScaler()
+    scaler_y = MinMaxScaler()
+    X_scaled = scaler_X.fit_transform(features)
+    y_scaled = scaler_y.fit_transform(target.values.reshape(-1, 1))
+
+    # Crear DataFrame escalado
+    data_scaled = pd.DataFrame(X_scaled, columns=selected_features)
+    data_scaled['MPO'] = y_scaled.flatten()  # Asegurarse de que 'MPO' sea un vector unidimensional
+
+    return data_scaled, scaler_X, scaler_y, selected_features
+
+# Función para entrenar el modelo ARIMA
+def entrenar_modelo(data_scaled, selected_features, order=(1,1,1)):
+    # Dividir en conjunto de entrenamiento y validación
+    train_size = int(len(data_scaled) * 0.8)
+    train_data = data_scaled.iloc[:train_size]
+    val_data = data_scaled.iloc[train_size:]
+
+    # Preparar variables
+    exog_train = train_data[selected_features]
+    endog_train = train_data['MPO']
+    exog_val = val_data[selected_features]
+    endog_val = val_data['MPO']
+
+    # Entrenar el modelo ARIMA con variables exógenas
+    model = SARIMAX(endog_train, exog=exog_train, order=order, enforce_stationarity=False, enforce_invertibility=False)
+    model_fit = model.fit(disp=False)
+
+    # Validación
+    predictions = model_fit.predict(start=train_size, end=len(data_scaled)-1, exog=exog_val)
+    mse = ((predictions - endog_val) ** 2).mean()
+    print(f"Mean Squared Error en validación: {mse}")
+
+    # Guardar el modelo
+    model_fit.save("data/arima_model.pkl")
+    print("Modelo ARIMA guardado como 'arima_model.pkl'")
     return model_fit
 
-# Generar Predicciones y Evaluar Modelo
-def evaluar_arima(model_fit, series, steps=30):
-    """
-    Genera predicciones y calcula las métricas de evaluación.
-    """
-    print("\nGenerando predicciones...")
-    pred = model_fit.get_forecast(steps=steps)
-    pred_mean = pred.predicted_mean
-    pred_ci = pred.conf_int()
-    
-    # Preparar datos para evaluación
-    actual = series[-steps:]
-    predictions = pred_mean[:steps]
-    
-    # Calcular métricas
-    mae = mean_absolute_error(actual, predictions)
-    mse = mean_squared_error(actual, predictions)
-    rmse = np.sqrt(mse)
-    r2 = r2_score(actual, predictions)
-    
-    print("\n=== Métricas de Evaluación ===")
-    print(f"Error Absoluto Medio (MAE): {mae:.4f}")
-    print(f"Error Cuadrático Medio (MSE): {mse:.4f}")
-    print(f"Raíz del Error Cuadrático Medio (RMSE): {rmse:.4f}")
-    print(f"Coeficiente de Determinación (R²): {r2:.4f}")
-    
-    return {
-        "MAE": mae,
-        "MSE": mse,
-        "RMSE": rmse,
-        "R2": r2,
-        "Predicciones": predictions,
-        "Confianza": pred_ci
-    }
+# Generar predicciones anuales para 2025
+def generar_predicciones_anuales(model_fit, scaler_X, scaler_y, selected_features, year):
+    start_date = datetime(year, 1, 1)
+    end_date = datetime(year, 12, 31, 23)
+    date_range = pd.date_range(start=start_date, end=end_date, freq='H')
 
-# Generar Predicciones para 2025
-def generar_predicciones_2025(model_fit, steps=365*24):
-    """
-    Genera predicciones para todo el año 2025 y las guarda en un archivo CSV.
-    """
-    print("\nGenerando predicciones para el año 2025...")
-    pred = model_fit.get_forecast(steps=steps)
-    pred_mean = pred.predicted_mean
-    
-    # Crear un rango de fechas para 2025
-    start_date = datetime(2025, 1, 1, 0)
-    date_range = [start_date + timedelta(hours=i) for i in range(steps)]
-    
-    # Crear DataFrame de resultados
-    predicciones_df = pd.DataFrame({
+    # Simular datos para las características exógenas
+    embalse_means = {feature: 0.5 for feature in selected_features}
+    simulated_data = {
         "FechaHora": date_range,
-        "Prediccion_MPO": pred_mean
-    })
-    
-    # Guardar en archivo CSV
-    output_file = "data/predicciones_mpo_2025.csv"
-    predicciones_df.to_csv(output_file, index=False)
-    print(f"Predicciones para 2025 guardadas en '{output_file}'.")
+        **{feature: [embalse_means[feature] * (1 + np.random.uniform(-0.05, 0.05)) for _ in range(len(date_range))]
+           for feature in selected_features}
+    }
+    simulated_df = pd.DataFrame(simulated_data)
 
-    return predicciones_df
+    # Escalar las características
+    X_future_scaled = scaler_X.transform(simulated_df[selected_features])
 
-# Graficar Resultados
-def graficar_resultados(series, pred_mean, pred_ci, steps=30):
-    """
-    Grafica las predicciones junto con la serie temporal real y sus intervalos de confianza.
-    """
-    plt.figure(figsize=(12, 6))
-    plt.plot(series[-100:], label='Serie Real', color='blue')
-    plt.plot(pred_mean, label='Predicciones', color='red')
-    plt.fill_between(
-        pred_ci.index, 
-        pred_ci.iloc[:, 0], 
-        pred_ci.iloc[:, 1], 
-        color='pink', alpha=0.3, label='Intervalo de Confianza'
-    )
-    plt.title("Predicciones del Modelo ARIMA")
-    plt.xlabel("Fecha")
-    plt.ylabel("MPO")
-    plt.legend()
-    plt.show()
+    # Realizar predicciones utilizando el método forecast
+    predictions_scaled = model_fit.forecast(steps=len(X_future_scaled), exog=X_future_scaled)
+    predictions_scaled = predictions_scaled.clip(0, 1)  # Asegurar que las predicciones estén en el rango [0,1]
 
-# Ejecución Principal
-def main():
-    # Cargar los datos
-    serie = cargar_datos()
+    # Invertir el escalado de las predicciones
+    y_future = scaler_y.inverse_transform(predictions_scaled.values.reshape(-1, 1))
 
-    # Entrenar el modelo ARIMA
-    arima_model = entrenar_arima(serie, order=(1, 1, 1))  # Ajusta el orden ARIMA si es necesario
+    # Añadir las predicciones al DataFrame
+    simulated_df["Prediccion_MPO"] = y_future.flatten()
 
-    # Evaluar el modelo y calcular métricas
-    metricas = evaluar_arima(arima_model, serie, steps=30)
+    # Guardar las predicciones
+    simulated_df.to_csv(f"data/predicciones_mpo_{year}.csv", index=False)
+    print(f"Predicciones guardadas para el año {year} en 'data/predicciones_mpo_{year}.csv'.")
 
-    # Graficar resultados de evaluación
-    graficar_resultados(serie, metricas["Predicciones"], metricas["Confianza"])
-
-    # Generar predicciones para el año 2025
-    predicciones_2025 = generar_predicciones_2025(arima_model)
-
-# Ejecutar el script
-if __name__ == "__main__":
-    main()
+# Ejecución del flujo completo
+data_scaled, scaler_X, scaler_y, selected_features = cargar_datos()
+arima_model = entrenar_modelo(data_scaled, selected_features, order=(1,1,1))
+generar_predicciones_anuales(arima_model, scaler_X, scaler_y, selected_features, 2025)
